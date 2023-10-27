@@ -4,7 +4,7 @@ Module for converting metabolic networks into Answer Set Programming (ASP) and m
 
 Pip requirements are in `requirements.txt`.
 
-Companion module of *[aspefm](https://github.com/maxm4/aspefm)*
+Companion module of *[aspefm](https://github.com/maxm4/aspefm)*.
 
 ## Main scripts :
 
