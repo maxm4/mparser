@@ -1,0 +1,10 @@
+cobra==0.19.0
+numpy==1.24.4
+numpy==1.25.0
+pandas==1.5.3
+PySimpleGUI==4.60.5
+PySimpleGUI==4.60.5
+python_libsbml==5.19.7
+python_libsbml_experimental==5.18.1
+scipy==1.11.3
+sympy==1.12
