@@ -34,6 +34,8 @@ The file `global_parameters.py` is meant as a file gathering all global paramete
 
 SBML to network reading parameters are by default adapted to COBRA files, which are not necessarily representative of every possible SBML.
 
+The file `compress_model.py` contains code from CNAPy Team's `EFMTool_Link`, which might require Java and the jdk. Make sure to install all requirements.
+
 ## Example usages :
 
 ```python mparser_cli.py METATOOL data/ppp.txt ASP data/ppp.lp4 ```

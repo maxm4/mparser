@@ -42,7 +42,7 @@ def to_metatool(reactions, reversibles, metabolites, metint, metext, stoichiomet
         formula = ' + '.join(reacts) + ' ' + arrow + ' ' + ' + '.join(prods)
         if (not reacts) or (not prods):
             warnings.warn('Producing a file that is unreadable by MetaTool due to reactions with only production/consumption') 
-            warnings.warn('If this is the result of conversion of a Cobra model, please run conversion on a model with boundaries created by cobra_to_sbml.py instead') 
+            warnings.warn('If this is the result of conversion of a Cobra model, please run conversion on a model with boundaries created by add_sbml_boundaries.py instead') 
         fcontent += reaction + ' : '+ formula + '\n'
         
     return fcontent      

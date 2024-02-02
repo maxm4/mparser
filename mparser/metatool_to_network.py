@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-metatool_to_network.py
+metatool_to_network.py 
 
-Reads a metabolism network
+Reads a metabolism network - in Metatool format
 Returns a MetaNetwork object
 
 """

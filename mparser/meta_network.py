@@ -28,7 +28,7 @@ class MetaNetwork:
         only_one = {}
         for metabolite, reaction, _ in self.stoichiometry:
             if only_one.get((metabolite, reaction)) is not None:
-               raise ValueError(f'Metabolite {metabolite} should be only used once in reaction {reaction}') 
+               warnings.warn(f'Metabolite {metabolite} should be only used once in reaction {reaction}') 
             only_one[(metabolite, reaction)] = True
         
     
@@ -82,13 +82,11 @@ class MetaNetwork:
         Initializes:
             nb_metext: number of external metabolites
             nb_transporters: number of transport or exchange reactions
-            nb_reversibles: number of reversible reactions
             nb_nullreacs: number of exchange reactions excluded from the model
         
         """
         self.nb_metext = len(self._metext_l)
         self.nb_transporters = len(self.transporters)
-        self.nb_reversibles = len(self._reversibles_l)
         self.nb_nullreacs = len(self.nullreacs)
         
 
@@ -107,7 +105,7 @@ class MetaNetwork:
             
     def fill_smatrix(self):
         """
-        Fills a stoichiometry matrix with the network data
+        Fills stoichiometry matrices with the network data
         Stores all matrix related fields in the data structure
         
         Initializes:
@@ -115,10 +113,11 @@ class MetaNetwork:
             ext_matrix: full stoichiometry matrix
             idx2reac, reac2idx: dicts to help reaction name/index association
             idx2imet, imet2idx: dicts to help metabolite name/index association
-            nb_metint, nb_reactions: dimensions of the matrix
+            nb_metint, nb_metall, nb_reactions: dimensions of the matrices
             nb_metabolites: alias for nb_metint, nb of internal metabolites
             ext_stoichiometry: sublist of stoichiometry only containing 
-                               external metabolite stoichiometry tuples          
+                               external metabolite stoichiometry tuples 
+            transporters: reactions at the boundary with external stoichiometry         
         """
         
         # Ensures self.metint is a list for performance
@@ -127,6 +126,7 @@ class MetaNetwork:
         # Matrix dimensions
         self.nb_reactions = len(self.reactions)
         self.nb_metint = len(self.metint)
+        self.nb_metall = len(self.metabolites)
         self.nb_metabolites = self.nb_metint
         
         # Additional dicts to help with direct association
@@ -139,7 +139,7 @@ class MetaNetwork:
         
         # Stoichiometry matrix with nb_metint lines and nb_reactions columns
         self.matrix = np.zeros((self.nb_metint, self.nb_reactions), dtype=float)
-        self.ext_matrix = np.zeros((len(self.metabolites), self.nb_reactions), dtype=float)
+        self.ext_matrix = np.zeros((self.nb_metall, self.nb_reactions), dtype=float)
         self.ext_stoichiometry = []
         self.transporters = getattr(self, 'transporters', [])
         
@@ -150,7 +150,59 @@ class MetaNetwork:
             else:
                 self.ext_stoichiometry.append(tupl)
                 self.transporters.append(tupl[1])
+                     
+                    
+    def fill_rmatrix(self):
+        """
+        Splits reversible reactions into two irreversible reactions
+        Construct a stoichiometry matrix with all reactions irreversible
+        Stores reversible reactions data after splitting in a reaction matrix
         
+        Initializes:
+            tuple_reversibles: tuples indicating relations between forwards and backwards direction
+            split_reactions: all reactions with reversible reactions split, all irreversible   
+            nb_sreacs: number of (irreversible) reactions after splitting reversibles
+            nb_reversibles: number of reversible reactions       
+            idx2sreac, sreac2idx: dicts to help split rxn name/index association
+            idx2rev, rev2idx: dicts to help reversibles name/index association
+            rsmatrix: stoichiometry matrix with split reactions
+            rmatrix: reversible reactions matrix indicating fwd/bwd directions        
+        """        
+        # Define forwards and backwards reaction names for split reversible reactions
+        fwd = lambda x: x; bwd = lambda x: x + '_rev'
+        self.tuple_reversibles = [(fwd(rev), bwd(rev)) for rev in self._reversibles_l]
+        self.split_reactions = sorted(list(self.irreversibles) + [item for tup in self.tuple_reversibles for item in tup])
+        
+        # Index to split reaction dicts and number of split reactions
+        self.idx2sreac = {i: r for i, r in enumerate(self.split_reactions)}
+        self.sreac2idx = {r: i for i, r in enumerate(self.split_reactions)}
+        self.idx2rev = {i: r for i, r in enumerate(self._reversibles_l)}
+        self.rev2idx = {r: i for i, r in enumerate(self._reversibles_l)}
+        
+        # Matrix dimensions
+        self.nb_sreacs = len(self.split_reactions)
+        self.nb_reversibles = len(self._reversibles_l)
+        
+        # Stoichiometry matrix of irreversible reactions with nb_metint lines and nb_sreacs columns
+        self.rsmatrix = np.zeros((self.nb_metint, self.nb_sreacs), dtype=float)
+        
+        # Reaction matrix defining at which indices are the reversible reactions
+        self.rmatrix = np.zeros((self.nb_reversibles, self.nb_sreacs), dtype=int)
+        
+        # Fill matrices
+        for tupl in self.stoichiometry:
+            # Stoichiometry of the matrix with split reactions
+            if tupl[0] in self.imet2idx:
+                self.rsmatrix[self.imet2idx[tupl[0]], self.sreac2idx[fwd(tupl[1])]] = tupl[2]
+                if tupl[1] in self.reversibles:
+                    self.rsmatrix[self.imet2idx[tupl[0]], self.sreac2idx[bwd(tupl[1])]] = -tupl[2]
+                
+        for rev in self._reversibles_l:        
+            # Fill ones at indices of forwards and backwards reactions
+            self.rmatrix[self.rev2idx[rev], self.sreac2idx[bwd(rev)]] = 1
+            self.rmatrix[self.rev2idx[rev], self.sreac2idx[fwd(rev)]] = 1
+
+
 
     def __init__(self, metext, metabolites, reactions, stoichiometry, reversibles, nullreacs=[]):
         """
@@ -171,6 +223,10 @@ class MetaNetwork:
             irreversibles: set of irreversible reactions names
             matrix: stoichiometry matrix
             transporters: list of transport reactions
+            
+        TODO: Sort out all list/set crap and the structures_check at the end
+              which throws ValueError if duplicates in a single functions
+              Make this execute before stoichiometry matrix filling
          
         Calls method fill_smatrix and also initializes all matrix related fields
             
@@ -193,6 +249,7 @@ class MetaNetwork:
         # Stoichiometry
         self.stoichiometry = stoichiometry
         self.fill_smatrix()
+        self.fill_rmatrix()
         # Transporters and extra fields
         self.transporters = sorted(list(set(self.transporters)))
         self.extras = getattr(self, 'extras', {})

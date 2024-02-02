@@ -9,7 +9,10 @@ Converts a file specificating a metabolic network from a format to another
 """
 
 from enum import Enum
+
+from .asp_to_network import asp_read_network
 from .dualize_mcs import dual_mcs
+from .compress_model import compress_mnet
 from .meta_network import MetaNetwork
 from .network_to_asp import format_asp
 from .network_to_sbml import format_sbml
@@ -17,6 +20,8 @@ from .network_to_efmtool import format_efmtool
 from .network_to_metatool import format_metatool
 from .network_to_scrumpy import format_scrumpy
 from .network_to_hypergraph import format_hypergraph
+from .network_to_bdd import format_bdd
+from .network_to_json import format_json
 from .scrumpy_to_network import scrumpy_read_network
 from .metatool_to_network import txt_read_network
 from .sbml_to_network import sbml_read_network
@@ -32,6 +37,7 @@ class InputFormatType(Enum):
     TXT = 'METATOOL'
     SBML = 'SBML'
     SPY = 'SCRUMPY'
+    ASP = 'ASP'
     PKL = 'PICKLE'
 
     def __str__(self):
@@ -52,6 +58,8 @@ class OutputFormatType(Enum):
     PKL = 'PICKLE'
     SPY = 'SCRUMPY'
     HYP = 'GRAPH'
+    BDD = 'BDD'
+    JSON = 'JSON'
 
     def __str__(self):
         return self.value
@@ -87,6 +95,8 @@ def read_network(in_fname, in_format):
         return sbml_read_network(in_fname)
     elif in_format == InputFormatType.SPY:
         return scrumpy_read_network(in_fname)
+    elif in_format == InputFormatType.ASP:
+        return asp_read_network(in_fname)
     elif in_format == InputFormatType.PKL:
         return pickle_read_network(in_fname)
     else:
@@ -107,7 +117,8 @@ def format_pickle(network:MetaNetwork, out_name):
 
     
 def convert(in_format:InputFormatType, in_name, 
-            out_format:OutputFormatType, out_name, 
+            out_format:OutputFormatType, out_name,
+            compression:bool, dict_file_name:str,
             to_dual_mcs, target_reactions, ballerstein):
     """ 
     
@@ -123,6 +134,8 @@ def convert(in_format:InputFormatType, in_name,
         ballerstein: Boolean indicating if Ballerstein formulation for MCSs
     """
     meta_network = read_network(in_name, in_format)
+    if compression:
+        meta_network, target_reactions = compress_mnet(meta_network, dict_file_name, target_reactions)
     if to_dual_mcs:
         meta_network = dual_mcs(meta_network, target_reactions=target_reactions, irr_reactions=ballerstein)
     if out_format == OutputFormatType.ASP:
@@ -139,6 +152,10 @@ def convert(in_format:InputFormatType, in_name,
         format_scrumpy(meta_network, out_name)
     elif out_format == OutputFormatType.HYP:
         format_hypergraph(meta_network, out_name)
+    elif out_format == OutputFormatType.BDD:
+        format_bdd(meta_network, out_name)
+    elif out_format == OutputFormatType.JSON:
+        format_json(meta_network, out_name)
     else:
         raise NotImplementedError # unsupported format
     

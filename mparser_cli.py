@@ -19,6 +19,8 @@ parser.add_argument('informat', type=InputFormatType, choices=list(InputFormatTy
 parser.add_argument('infile', help='Input file name')
 parser.add_argument('outformat', type=OutputFormatType, choices=list(OutputFormatType), help='Output format type')
 parser.add_argument('outfile', help='Output file name')
+parser.add_argument('--compression-dict', help='Compression correspondance dict file name')
+parser.add_argument('--compress', help='Enables metabolic network compression', action='store_true')
 parser.add_argument('--target-reactions', help='Target reactions for computing Minimal Cut Sets', default=[])
 parser.add_argument('--ballerstein', help='Enables Ballerstein formulation for Minimal Cut Sets', action='store_true')
 parser.add_argument('--to-dual-mcs', action='store_true', help='Convert to dual network for computing Minimal Cut Sets')
@@ -27,8 +29,10 @@ in_format = opts.informat
 in_name = opts.infile
 out_format = opts.outformat 
 out_name = opts.outfile
+compress = opts.compress
+compression_dict = opts.compression_dict
 to_dual_mcs = opts.to_dual_mcs
 ballerstein = opts.ballerstein
 target_reactions = opts.target_reactions
 if target_reactions: target_reactions = target_reactions.split(',')
-convert(in_format, in_name, out_format, out_name, to_dual_mcs, target_reactions, ballerstein)
+convert(in_format, in_name, out_format, out_name, compress, compression_dict, to_dual_mcs, target_reactions, ballerstein)
