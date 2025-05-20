@@ -19,7 +19,7 @@ from typing import Dict
 import tempfile
 import cobra, cobra.util.array
 
-import pprint 
+import pprint, warnings
 
 import efmtool_link.efmtool_intern as efmtool_intern
 import efmtool_link.efmtool_extern as efmtool_extern
@@ -270,6 +270,8 @@ def compress_mnet(mnet: MetaNetwork, dict_file="", target_reactions=[]):
     if dict_file:
         with open(dict_file, 'w') as f:
             pprint.pprint(subset_dict, stream=f, compact=True)
+    else:
+        warnings.warn('Compression invoked without --compression-dict, reaction scaling coefficients in compressed reactions will not be stored anywhere!')
     with tempfile.NamedTemporaryFile('w', delete=False) as fp:
         fp.write(metatool_model); fp.close()  
         compressed_mnet = txt_read_network(fp.name)
